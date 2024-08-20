@@ -46,6 +46,7 @@ class CustomMultiheadAttention(nn.Module):
         K = K.transpose(-2, -1)
         attn_scores = torch.matmul(Q, K) / (self.head_dim ** 0.5)
 
+
         # Apply softmax manually to get the attention weights
         attn_weights = torch.zeros_like(attn_scores)
         for i in range(attn_scores.size(0)):  # Batch size: inferred_dim
@@ -62,6 +63,7 @@ class CustomMultiheadAttention(nn.Module):
         # Multiply the attention weights with the value projections
         attn_output = torch.matmul(attn_weights, V)
 
+
         # Reshape back to original dimensions
         attn_output = attn_output.transpose(0, 1).reshape(inferred_dim, batch_size, self.embed_dim)
 
@@ -70,15 +72,16 @@ class CustomMultiheadAttention(nn.Module):
 
         return output, attn_weights
 # Define parameters
-d_model = 512  # Embedding dimension
-num_heads = 8  # Number of attention heads
+batch_size = 1
+d_model = 4096  # Embedding dimension
+num_heads = 32  # Number of attention heads
+sequence_length = 30
 
 # Initialize MultiheadAttention layer
 def inputs_outputs():
     attention = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads)
-
     # Create random input tensor
-    input_tensor = torch.randn(3, 1, d_model)  # (sequence_length, batch_size, embedding_dimension)
+    input_tensor = torch.randn(sequence_length, batch_size, d_model)  # (sequence_length, batch_size, embedding_dimension)
 
     # No attention mask is provided in this example
     output, attn_weights = attention(input_tensor, input_tensor, input_tensor)
@@ -92,20 +95,20 @@ def inputs_outputs():
     # Extract the bias for the output projection
     b_O = attention.out_proj.bias.data
 
-    custom_attention = CustomMultiheadAttention(
-        embed_dim=d_model,
-        num_heads=num_heads,
-        W_Q=W_Q,
-        W_K=W_K,
-        W_V=W_V,
-        b_Q=b_Q,
-        b_K=b_K,
-        b_V=b_V,
-        W_O=W_O,
-        b_O=b_O
-    )
+    # custom_attention = CustomMultiheadAttention(
+    #     embed_dim=d_model,
+    #     num_heads=num_heads,
+    #     W_Q=W_Q,
+    #     W_K=W_K,
+    #     W_V=W_V,
+    #     b_Q=b_Q,
+    #     b_K=b_K,
+    #     b_V=b_V,
+    #     W_O=W_O,
+    #     b_O=b_O
+    # )
 
-    custom_output, custom_attn_weights = custom_attention(input_tensor, input_tensor, input_tensor)
+    # custom_output, custom_attn_weights = custom_attention(input_tensor, input_tensor, input_tensor)
 
 
     return W_K.detach().numpy(), W_Q.detach().numpy(), W_V.detach().numpy(), W_O.detach().numpy(), b_K.detach().numpy(), b_Q.detach().numpy(), b_V.detach().numpy(), b_O.detach().numpy(), output.detach().numpy(), input_tensor.detach().numpy()

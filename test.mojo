@@ -1,6 +1,6 @@
 # var transposed = ops.transpose_matrix(graph1[0])
 from max.engine import InputSpec, InferenceSession
-from max.graph import Graph, TensorType, Type, ops, Symbol, SymbolicSlice
+from max.graph import Graph, TensorType, Type, ops, Symbol
 from max import engine
 from max.tensor import Tensor, TensorShape
 from max.engine import Model
@@ -64,24 +64,76 @@ from utils.index import Index
 #     var x = results.get[DType.float32]("output0")
 #     print(x)
 
-fn main () raises:
-    var shape1 = TensorShape(8,3,3)
-    var t1 = Tensor[DType.float32].rand(shape1)
-    print(t1)
-    var t2 = Tensor[DType.float32] (1) # Change this to rank 1 tensor
-    t2[0] = 0 # This is the index where the slice should start
-    print(t2)
-    print(t2.rank())
+# fn main () raises:
+#     var shape1 = TensorShape(8,3,3)
+#     var t1 = Tensor[DType.float32].rand(shape1)
+#     print(t1)
 
-    var graph1 = Graph(in_types=List[Type] (TensorType(DType.float32, "a","m", "n"), TensorType(DType.float32)))
-    var x = ops.slicing.slice(graph1[0],graph1[1], axis=0)
-    graph1.output(x)
-    graph1.verify()
-    var session = engine.InferenceSession()
-    var slicing = session.load(graph1)
-
-    # var results = slicing.execute(("input0", t1, "input1", t2))
+#     var s = Slice(1,4)
 
 
+#     var graph1 = Graph(in_types=List[Type] (TensorType(DType.float32, "a","m", "m")))
+#     var x = ops.slicing.slice(graph1[0],s)
+#     # var x = ops.softmax(graph1[0])
+#     graph1.output(x)
+#     graph1.verify()
+#     var session = engine.InferenceSession()
+#     var slicing = session.load(graph1)
+
+#     var results = slicing.execute("input0", t1)
+#     var xd = results.get[DType.float32]("output0")
+#     print(xd)
+
+####################################NOT WORKING#############################
+# fn main () raises:
+#     var shape1 = TensorShape(8,3,3)
+#     var t1 = Tensor[DType.float32].rand(shape1)
+#     var idx = Tensor[DType.int32] (1)  # Create a tensor for the index
+#     idx[0] = 2
+#     print(t1)
+#     print(idx)
+
+#     var graph1 = Graph(in_types=List[Type] (TensorType(DType.float32, "a","m", "m"), TensorType(DType.int32, "b")))
+#     var x = ops.slicing.slice(graph1[0], graph1[1], axis = 0)
+#     graph1.output(x)
+#     graph1.verify()
+#     var session = engine.InferenceSession()
+#     var slicing = session.load(graph1)
+
+#     var results = slicing.execute("input0", t1, "input1", idx)  # Pass the inputs as a dictionary
+#     var xd = results.get[DType.float32] ("output0")
+#     print(xd)
 
 
+# fn main () raises:
+#     var graph8 = Graph(in_types=List[Type](TensorType(DType.float32, "a")))
+#     var softmaxed = ops.softmax(graph8[0])
+#     graph8.output(softmaxed)
+#     graph8.verify()
+#     var session = engine.InferenceSession()
+#     var softmax = session.load(graph8)
+
+#     var shape1 = TensorShape(8,3,3)
+#     var t1 = Tensor[DType.float32].rand(shape1)
+#     print(t1)
+#     var attn_weights = Tensor[DType.float32] (t1.shape())
+#     for i in range(t1.shape()[0]):
+#             for j in range(t1.shape()[1]):
+#                 var new_tens = Tensor[DType.float32] (t1.shape()[2])
+#                 new_tens.store(0, t1.load[width = 3](i,j,0))
+#                 var results = softmax.execute("input0", new_tens)
+#                 var xd = results.get[DType.float32] ("output0")
+#                 print(xd)
+#                 attn_weights.store(Index(i,j,0), xd.load[width = 3](0))
+    
+#     print(attn_weights)
+
+
+fn add(x:Int, y:Int)->Int:
+    return x+y
+
+fn main():
+    var x = add(3,4)
+    var y = add(5,8)
+    var z = add(31,2)
+    print(x,y,z)
