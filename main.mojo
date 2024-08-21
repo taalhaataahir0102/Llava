@@ -224,6 +224,12 @@ fn main() raises:
     graph8.verify()
     var softmax = session.load(graph8)
 
+    var graph9 = Graph(in_types=List[Type](TensorType(DType.float32, "a")))
+    var normeded = ops.layer_norm(graph9[0])
+    graph9.output(normeded)
+    graph9.verify()
+    var layer_norm = session.load(graph9)
+
     Python.add_to_path(".")
     var mypython = Python.import_module("main")
 
