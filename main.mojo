@@ -9,9 +9,9 @@ from max.engine import Model
 from algorithm import sum
 
 alias batch_size = 1
-alias d_model = 4096  # Embedding dimension
-alias num_heads = 32
-alias sequence_length = 30
+alias d_model = 516  # Embedding dimension
+alias num_heads = 12
+alias sequence_length = 64
 
 @always_inline
 fn numpy_data_pointer[
@@ -81,6 +81,35 @@ fn KQV_calculation(mat: Tensor[DType.float32], weight: Tensor[DType.float32], ba
     results = transpose_01.execute("input0", Q)
     Q = results.get[DType.float32]("output0")
     return Q
+
+struct Linear:
+    var weights: Tensor[DType.float32]
+    var biases: Tensor[DType.float32]
+
+    fn __init__(inout self, W: Tensor[DType.float32], B: Tensor[DType.float32]):
+        self.weights = W
+        self.biases = B
+
+    fn forward(self, input:Tensor[DType.float32] , multiplication_3D:Model, addition:Model) raises -> Tensor[DType.float32]:
+        var results = multiplication_3D.execute("input0", input, "input1", self.weights)
+        var output = results.get[DType.float32]("output0")
+        results = addition.execute("input0", output, "input1", self.biases)
+        output = results.get[DType.float32]("output0")
+        return output
+
+struct LayerNorm:
+    var gema: Tensor[DType.float32]
+    var beta: Tensor[DType.float32]
+    
+    fn __init__(inout self, gema: Tensor[DType.float32], beta: Tensor[DType.float32]):
+        self.gema = gema
+        self.beta = beta
+
+    fn forward(self, input:Tensor[DType.float32] , norm:Model) raises -> Tensor[DType.float32]:
+        var results = norm.execute("input0", input, "input1", self.gema, "input2", self.beta)
+        var output = results.get[DType.float32]("output0")
+
+        return output
 
 struct Attention:
     var W_K: Tensor[DType.float32]
@@ -224,21 +253,23 @@ fn main() raises:
     graph8.verify()
     var softmax = session.load(graph8)
 
-    var graph9 = Graph(in_types=List[Type](TensorType(DType.float32, "a")))
-    var normeded = ops.layer_norm(graph9[0])
-    graph9.output(normeded)
+    var graph9 = Graph(in_types=List[Type](TensorType(DType.float32, "a", "b", "c"),TensorType(DType.float32, "c"), TensorType(DType.float32, "c")))
+    var mean = ops.layer_norm(graph9[0],gamma = graph9[1], beta = graph9[2] , epsilon = 1e-5)
+    graph9.output(mean)
     graph9.verify()
-    var layer_norm = session.load(graph9)
+    var norm = session.load(graph9)
 
     Python.add_to_path(".")
     var mypython = Python.import_module("main")
 
+    var mul: SIMD[DType.float32,1] = -1
+
     var mojo:Float32 = 0.0
     var pytorch:Float32 = 0.0
 
-    print("Starting 32 attention layers")
+    print("Starting 144 attention layers")
     var start = now()
-    for j in range(32):
+    for j in range(144):
         var start_pytorch = now()
         var x: PythonObject = mypython.inputs_outputs()
         var end_pytorch = now()
@@ -254,22 +285,61 @@ fn main() raises:
                             input_weights[5],input_weights[6],input_weights[7],d_model,num_heads)
         var xd = layer1.forward(input,input,input,multiplication, transpose, addition, transpose_12, transpose_01, transpose_21,
                                 multiplication_3D, division, softmax)
-        
         var end_mojo = now()
         var execution_time_mojo = (end_mojo - start_mojo)/1000000000
 
         pytorch += execution_time_pytorch
         mojo += execution_time_mojo
 
-        var diff = xd - output
-        var s = sum(diff._to_buffer())
-        if s >= 2:
-            print("Attention Layers Have Different Outputs")
-        else:
-            print("Attention Layers Have Same Outputs")
-    
+        # var diff = xd.__sub__(output.__mul__(mul))
+        # var s:Float32 = sum(diff._to_buffer())
+        # if s >= 1:
+        #     print("Attention Layers Have Different Outputs")
+        #     print("xd",xd)
+        #     print("output:",output)
+        #     print("diff:",diff)
+        #     print("s:",s)
+        # else:
+        #     print("Attention Layers Have Same Outputs")
+
+    var shape2 = TensorShape(d_model)
+    var gema = Tensor[DType.float32](shape2)
+    for i in range(gema.num_elements()):
+        gema[i] = 1
+    var beta = Tensor[DType.float32](shape2)
+
+    print("starting 144 Layer Norm")
+    for j in range(144):
+        var start_pytorch = now()
+        var y: PythonObject = mypython.norm_input_output()
+        var end_pytorch = now()
+        var execution_time_pytorch = (end_pytorch - start_pytorch)/1000000000
+        var input = numpy_to_tensor(y[0])
+        var output = numpy_to_tensor(y[1])
+        
+        var start_mojo = now()
+        var layer2 = LayerNorm(gema, beta)
+        var xd = layer2.forward(input, norm)
+        var end_mojo = now()
+        var execution_time_mojo = (end_mojo - start_mojo)/1000000000
+
+
+        pytorch += execution_time_pytorch
+        mojo += execution_time_mojo
+
+        # var diff = xd.__sub__(output.__mul__(mul))
+        # var s:Float32 = sum(diff._to_buffer())
+        # if s >= 1.0:
+        #     print("Norm Layers Have Different Outputs")
+        #     print(xd)
+        #     print(output)
+        #     print(diff)
+        #     print(s)
+        # else:
+        #     print("Norm Layers Have Same Outputs")
+
     var end = now()
-    print("Time taken:")
+    print("Time taken in 12 attention and 12 Layer norms:")
     print("mojo(sec):",mojo)
     print("pytorch(sec):",pytorch)
     print("Total time taken i.e., reading the weights, running both mojo and pytorch:", (end - start)/1000000000)

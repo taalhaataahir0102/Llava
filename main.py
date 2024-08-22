@@ -73,9 +73,9 @@ class CustomMultiheadAttention(nn.Module):
         return output, attn_weights
 # Define parameters
 batch_size = 1
-d_model = 4096  # Embedding dimension
-num_heads = 32  # Number of attention heads
-sequence_length = 30
+d_model = 516  # Embedding dimension
+num_heads = 12  # Number of attention heads
+sequence_length = 64
 
 # Initialize MultiheadAttention layer
 def inputs_outputs():
@@ -113,4 +113,9 @@ def inputs_outputs():
 
     return W_K.detach().numpy(), W_Q.detach().numpy(), W_V.detach().numpy(), W_O.detach().numpy(), b_K.detach().numpy(), b_Q.detach().numpy(), b_V.detach().numpy(), b_O.detach().numpy(), output.detach().numpy(), input_tensor.detach().numpy()
 
-# x = inputs_outputs()
+def norm_input_output():
+    input_tensor = torch.randn(batch_size, sequence_length, d_model)
+    # input_tensor = torch.randn(1, 3, 4)
+    layer_norm = nn.LayerNorm(normalized_shape=input_tensor.shape[-1])
+    output_tensor_original = layer_norm(input_tensor)
+    return input_tensor.detach().numpy(), output_tensor_original.detach().numpy()

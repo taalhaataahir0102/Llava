@@ -129,11 +129,53 @@ from utils.index import Index
 #     print(attn_weights)
 
 
-fn add(x:Int, y:Int)->Int:
-    return x+y
+# fn add(x:Int, y:Int)->Int:
+#     return x+y
 
-fn main():
-    var x = add(3,4)
-    var y = add(5,8)
-    var z = add(31,2)
-    print(x,y,z)
+# fn main():
+#     var x = add(3,4)
+#     var y = add(5,8)
+#     var z = add(31,2)
+#     print(x,y,z)
+
+# fn main () raises:
+#     var graph9 = Graph(in_types=List[Type](TensorType(DType.float32, "a", "b", "c")))
+#     var mean = ops.mean(graph9[0], axis = -1)
+#     graph9.output(mean)
+#     graph9.verify()
+#     var session = engine.InferenceSession()
+#     var softmax = session.load(graph9)
+
+#     var shape1 = TensorShape(1,3,4)
+#     var t1 = Tensor[DType.float32].rand(shape1)
+#     print(t1)
+
+#     var results = softmax.execute("input0", t1)
+#     var xd = results.get[DType.float32] ("output0")
+#     print(xd)
+
+fn main () raises:
+    var graph10 = Graph(in_types=List[Type](TensorType(DType.float32, "a", "b", "c"),TensorType(DType.float32, "c"), TensorType(DType.float32, "c")))
+    var mean = ops.layer_norm(graph10[0],gamma = graph10[1], beta = graph10[2] , epsilon = 1e-5)
+    graph10.output(mean)
+    graph10.verify()
+    var session = engine.InferenceSession()
+    var norm = session.load(graph10)
+
+    var shape1 = TensorShape(1,3,4)
+    var t1 = Tensor[DType.float32].rand(shape1)
+
+    var shape2 = TensorShape(4)
+    var t2 = Tensor[DType.float32](shape2)
+    for i in range(t2.num_elements()):
+        t2[i] = 1
+
+    var t3 = Tensor[DType.float32](shape2)
+    print(t1)
+    print(t2)
+    print(t3)
+    var results = norm.execute("input0", t1, "input1", t2,"input2", t3)
+    var xd = results.get[DType.float32] ("output0")
+    print(xd)
+
+    
