@@ -5,6 +5,8 @@ from max import engine
 from max.tensor import Tensor, TensorShape
 from max.engine import Model
 from utils.index import Index
+from utils.numerics import inf
+from max.engine.tensor_map import TensorMap
 
 # fn main() raises:
 
@@ -154,28 +156,88 @@ from utils.index import Index
 #     var xd = results.get[DType.float32] ("output0")
 #     print(xd)
 
-fn main () raises:
-    var graph10 = Graph(in_types=List[Type](TensorType(DType.float32, "a", "b", "c"),TensorType(DType.float32, "c"), TensorType(DType.float32, "c")))
-    var mean = ops.layer_norm(graph10[0],gamma = graph10[1], beta = graph10[2] , epsilon = 1e-5)
-    graph10.output(mean)
+# fn main () raises:
+#     var graph10 = Graph(in_types=List[Type](TensorType(DType.float32, "a", "b", "c"),TensorType(DType.float32, "c"), TensorType(DType.float32, "c")))
+#     var mean = ops.layer_norm(graph10[0],gamma = graph10[1], beta = graph10[2] , epsilon = 1e-5)
+#     graph10.output(mean)
+#     graph10.verify()
+#     var session = engine.InferenceSession()
+#     var norm = session.load(graph10)
+
+#     var shape1 = TensorShape(1,3,4)
+#     var t1 = Tensor[DType.float32].rand(shape1)
+
+#     var shape2 = TensorShape(4)
+#     var t2 = Tensor[DType.float32](shape2)
+#     for i in range(t2.num_elements()):
+#         t2[i] = 1
+
+#     var t3 = Tensor[DType.float32](shape2)
+#     print(t1)
+#     print(t2)
+#     print(t3)
+#     var results = norm.execute("input0", t1, "input1", t2,"input2", t3)
+#     var xd = results.get[DType.float32] ("output0")
+#     print(xd)
+
+# fn main() raises:
+#     var shape = TensorShape(50257,512)
+#     var emb_table = Tensor[DType.float32].rand(shape)
+#     print(emb_table)
+
+#     # print(emb_table[Index(0,1)])
+
+#     var x = emb_table.load[width = 512](Index(15496))
+#     # print(x.shape())
+#     print(x)
+
+
+# fn main():
+#     print(math.sqrt(5))
+#     var base = Float64(10)
+#     var exponent = Float64(0.5)
+#     var x = pow(base, exponent)
+#     print(x)
+
+# fn main():
+#     var x = Tensor[DType.float32] (5)
+#     for i in range(x.shape()[0]):
+#         x[i] = inf[DType.float32] ()
+#     print(x)
+
+fn main() raises:
+    var x = Tensor[DType.float32] (1,5,42)
+    var y = Tensor[DType.float32] (1,5,42)
+    var z = Tensor[DType.float32] (1,5,42)
+
+    for i in range(1):
+        for j in range(5):
+            for k in range(42):
+                x[Index(i,j,k)] = 1
+                y[Index(i,j,k)] = 2
+                z[Index(i,j,k)] = 3
+
+
+    var in_types = List[Type] (TensorType(DType.float32, 1, 5, 42), TensorType(DType.float32, 1, 5, 42), TensorType(DType.float32, 1, 5, 42))
+    var graph10 = Graph(in_types=in_types)
+    var inputs = List[Symbol] (graph10[0], graph10[1], graph10[2])
+    var con = ops.concat(inputs, -1)
+    graph10.output(con)
     graph10.verify()
     var session = engine.InferenceSession()
-    var norm = session.load(graph10)
-
-    var shape1 = TensorShape(1,3,4)
-    var t1 = Tensor[DType.float32].rand(shape1)
-
-    var shape2 = TensorShape(4)
-    var t2 = Tensor[DType.float32](shape2)
-    for i in range(t2.num_elements()):
-        t2[i] = 1
-
-    var t3 = Tensor[DType.float32](shape2)
-    print(t1)
-    print(t2)
-    print(t3)
-    var results = norm.execute("input0", t1, "input1", t2,"input2", t3)
-    var xd = results.get[DType.float32] ("output0")
-    print(xd)
-
+    var concat = session.load(graph10)
     
+    var tensorMap = session.new_tensor_map()
+    
+    tensorMap.borrow("input"+str(0), x)
+    tensorMap.borrow("input"+str(1), y)
+    tensorMap.borrow("input"+str(2), z)
+
+    print("tensorMap:", tensorMap)
+    var results = concat.execute(tensorMap)
+    var xd = results.get[DType.float32] ("output0")
+
+    print("x:",x)
+    print("y:", y)
+    print("z:",z)
+    print("xd:",xd)
