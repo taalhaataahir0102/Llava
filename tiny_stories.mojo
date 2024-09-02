@@ -271,6 +271,7 @@ fn main() raises:
         var gema = numpy_to_tensor(mypython.layer_weights('blocks.'+str(w)+'.ln1.weight'))
         var beta = numpy_to_tensor(mypython.layer_weights('blocks.'+str(w)+'.ln1.bias'))
         var norm_layer = layer_norm(input_to_block, gema, beta, norm)
+        print("norm_layer.shape():", norm_layer.shape())
 
         var weights_keys = List[Tensor[DType.float32]]()
         var weights_queries = List[Tensor[DType.float32]]()
@@ -279,9 +280,9 @@ fn main() raises:
             weights_keys.append(numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.sa.heads.'+str(i)+'.key.weight')))
             weights_queries.append(numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.sa.heads.'+str(i)+'.query.weight')))
             weights_values.append(numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.sa.heads.'+str(i)+'.value.weight')))
+        print("len(weights_keys):", len(weights_keys))
 
         var heads = List[Tensor[DType.float32]]()
-
         for i in range(num_heads):
             heads.append(head(norm_layer,weights_keys[i], weights_queries[i], weights_values[i], inf_tensor ,multiplication, transpose, transpose_21, 
                         multiplication_3D, division, softmax))
@@ -289,9 +290,12 @@ fn main() raises:
         var heads_py = Python.dict()
         for i in range(num_heads):
             heads_py["input"+str(i)] = tensor_to_numpy(heads[i])
-        
+        print("len(heads_py):", len(heads_py))
+
         var results = concat.execute(heads_py)
         var concatinated = results.get[DType.float32] ("output0")
+        print("concatinated.shape()", concatinated.shape())
+        print(concatinated)
 
         var weight_proj = numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.sa.proj.weight'))
         var bias_proj = numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.sa.proj.bias'))
@@ -300,6 +304,7 @@ fn main() raises:
         gema = numpy_to_tensor(mypython.layer_weights('blocks.'+str(w)+'.ln2.weight'))
         beta = numpy_to_tensor(mypython.layer_weights('blocks.'+str(w)+'.ln2.bias'))
         var norm_layer2 = layer_norm(proj, gema, beta, norm)
+        print("norm_layer2.shape():", norm_layer2.shape())
 
         var weight_ffwd = List[Tensor[DType.float32]]()
         var bias_ffwd = List[Tensor[DType.float32]]()
@@ -308,8 +313,7 @@ fn main() raises:
         bias_ffwd.append(numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.ffwd.net.0.bias')))
         bias_ffwd.append(numpy_to_tensor( mypython.layer_weights('blocks.'+str(w)+'.ffwd.net.2.bias')))
         var ffwd = feedforward(norm_layer2, weight_ffwd, bias_ffwd, multiplication, transpose, addition, relu) + proj
-        print("*****OUTPUT*****")
-        print(ffwd)
+        print("ffwd.shape():", ffwd.shape())
 
         input_to_block = ffwd
 
@@ -320,10 +324,10 @@ fn main() raises:
     var lm_head_weight = numpy_to_tensor(mypython.layer_weights('lm_head.weight'))
     var lm_head_bias = numpy_to_tensor(mypython.layer_weights('lm_head.bias'))
     var logits = linear(norm_layer,lm_head_weight,lm_head_bias,multiplication, transpose, addition)
+    print("logits.shape():", logits.shape())
 
     var probs = logits_extraction(logits,softmax_2d)
-
-    print(probs)
+    print("probs.shape():", probs.shape())
 
     var next_token = mypython.output(tensor_to_numpy(probs))
     print(input, next_token)

@@ -28,7 +28,13 @@ def output(probs):
     enc = tiktoken.get_encoding("gpt2")
     idx_next = torch.multinomial(probs_tensor, num_samples=1)
     decoded_text = enc.decode([idx_next.item()])
-    return decoded_text
+    return decoded_text, idx_next.tolist()[0]
+
+def combine_lists(list1, list2):
+    # Combine list2 (excluding the first element) with list1
+    print(":) ",list2[1:], list1, list2[1:] + list1)
+    result = list2[1:] + list1
+    return result
 
 
 # model_weights()
